@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fener — ışıkla / sesle gönder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14; --panel:#111820; --panel-2:#182029; --border:#232F3B;
+    --text:#EDEFF2; --muted:#8492A0;
+    --amber:#F2A93B; --amber-dim:#4A3A20;
+    --teal:#2EC4B6; --teal-dim:#1B3B38;
+    --danger:#E2685A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif; overflow-x:hidden;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+  #app{position:relative; min-height:100vh; display:flex; flex-direction:column;}
+  .screen{display:none; flex-direction:column; min-height:100vh; width:100%;}
+  .screen.active{display:flex;}
+
+  #screen-home{position:relative;}
+  .half{flex:1; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; cursor:pointer; overflow:hidden; border:none; color:inherit; padding:32px 20px;}
+  #half-al{background:radial-gradient(120% 100% at 50% 100%, var(--teal-dim), var(--bg) 70%);}
+  #half-ver{background:radial-gradient(120% 100% at 50% 0%, var(--amber-dim), var(--bg) 70%);}
+  .beacon{position:absolute; inset:-60% -20%; pointer-events:none; opacity:.55;}
+  #half-al .beacon{background:conic-gradient(from 250deg at 50% 100%, transparent 0deg, rgba(46,196,182,.35) 18deg, transparent 46deg); animation:sweepA 5s linear infinite;}
+  #half-ver .beacon{background:conic-gradient(from 70deg at 50% 0%, transparent 0deg, rgba(242,169,59,.35) 18deg, transparent 46deg); animation:sweepB 5s linear infinite;}
+  @keyframes sweepA{to{transform:rotate(360deg);}}
+  @keyframes sweepB{to{transform:rotate(-360deg);}}
+  .half-icon{font-size:34px; z-index:1;}
+  .half-label{font-size:28px; font-weight:700; letter-spacing:.04em; z-index:1;}
+  .half-sub{font-size:13px; color:var(--muted); z-index:1; text-align:center; max-width:260px;}
+  #half-al .half-label{color:var(--teal);}
+  #half-ver .half-label{color:var(--amber);}
+  #home-divider{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:2; text-align:center; pointer-events:none;}
+  #home-divider .wordmark{font-size:15px; font-weight:700; letter-spacing:.25em;}
+  #home-divider .tagline{font-size:10.5px; color:var(--muted); margin-top:4px;}
+
+  .topbar{display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border); background:var(--panel);}
+  .back-btn{background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; flex-shrink:0;}
+  .topbar-title{font-weight:700; font-size:15px;}
+  .topbar-title.al{color:var(--teal);} .topbar-title.ver{color:var(--amber);}
+
+  .body-pad{padding:24px 20px 40px; flex:1; display:flex; flex-direction:column; gap:18px;}
+  .btn{border:none; border-radius:12px; padding:15px 20px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:8px;}
+  .btn-amber{background:var(--amber); color:#241a06;}
+  .btn-teal{background:var(--teal); color:#04211e;}
+  .btn-ghost{background:var(--panel-2); color:var(--text); border:1px solid var(--border);}
+  .method-btn{display:flex; align-items:center; gap:14px; text-align:left; padding:16px; border-radius:14px; border:1px solid var(--border); background:var(--panel); cursor:pointer;}
+  .method-btn .ic{font-size:26px;}
+  .method-btn .lbl{font-weight:700; font-size:15px;}
+  .method-btn .sub{font-size:12px; color:var(--muted); margin-top:2px;}
+  .method-btn.teal{border-color:rgba(46,196,182,.4);}
+  .method-btn.amber{border-color:rgba(242,169,59,.4);}
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:18px;}
+  .card-row{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); padding:4px 0;}
+  .card-row b{color:var(--text); font-weight:500;}
+  .warn{background:rgba(226,104,90,.1); border:1px solid rgba(226,104,90,.35); color:#F0A99E; border-radius:10px; padding:12px 14px; font-size:12.5px; line-height:1.5;}
+  .hint{color:var(--muted); font-size:13px; line-height:1.6;}
+  input[type=file]{display:none;}
+  .drop{border:1.5px dashed var(--border); border-radius:14px; padding:34px 20px; display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer; color:var(--muted); text-align:center;}
+  .drop .icon{font-size:30px;}
+
+  .pixel-thumb{image-rendering:pixelated; image-rendering:crisp-edges; border-radius:10px; border:1px solid var(--border); background:#000;}
+
+  /* transmit / receive stage */
+  .stage{display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:20px; padding:20px; background:#05070A;}
+  .stage.active{display:flex;}
+  .eq{display:flex; gap:6px; align-items:flex-end; height:80px;}
+  .eq-bar{width:14px; border-radius:3px; background:var(--panel-2); transition:height .08s ease, background .08s ease; height:8px;}
+  .eq-bar.on{background:var(--amber);}
+  #color-flash{width:min(70vw,260px); aspect-ratio:1/1; border-radius:20px; transition:background-color .05s linear;}
+  .stage-status{text-align:center;}
+  .stage-status .main{font-size:14px; color:var(--amber); font-weight:600;}
+  .stage-status .sub{font-size:11.5px; color:var(--muted); margin-top:3px;}
+  #cam-wrap{position:relative; flex:1; display:none; align-items:center; justify-content:center; background:#000; overflow:hidden;}
+  #cam-wrap.active{display:flex;}
+  #video{width:100%; height:100%; object-fit:cover;}
+  .scan-guide{position:absolute; inset:32% 32%; border:2px solid rgba(46,196,182,.55); border-radius:14px; pointer-events:none;}
+  .recv-overlay{position:absolute; left:0; right:0; bottom:0; padding:16px 18px 22px; background:linear-gradient(to top, rgba(0,0,0,.85), transparent); display:flex; flex-direction:column; gap:10px;}
+  #mic-level-wrap{position:relative; flex:1; display:none; align-items:center; justify-content:center; padding:24px;}
+  #mic-level-wrap.active{display:flex;}
+  .progress-bar{height:6px; background:rgba(255,255,255,.12); border-radius:4px; overflow:hidden;}
+  .progress-fill{height:100%; background:var(--teal); width:0%; transition:width .15s ease;}
+  #recv-status-text{font-size:13px; color:var(--teal); font-weight:600;}
+
+  #recv-result{display:none; flex-direction:column; gap:16px; flex:1; padding:20px; align-items:center; justify-content:center;}
+  #recv-result.active{display:flex;}
+  .btn-row{display:flex; gap:10px; width:100%;}
+  .btn-row .btn{flex:1;}
+  @media (prefers-reduced-motion: reduce){.beacon{animation:none;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <button class="half" id="half-al" onclick="goReceiveIntro()">
+      <div class="beacon"></div>
+      <div class="half-icon">◎</div>
+      <div class="half-label">AL</div>
+      <div class="half-sub">Ses ya da renk sinyalini oku</div>
+    </button>
+    <div id="home-divider">
+      <div class="wordmark display">FENER</div>
+      <div class="tagline">internetsiz · bluetooth'suz</div>
+    </div>
+    <button class="half" id="half-ver" onclick="goSendIntro()">
+      <div class="beacon"></div>
+      <div class="half-icon">◈</div>
+      <div class="half-label">VER</div>
+      <div class="half-sub">Fotoğrafın minyatürünü sesle/ışıkla yayınla</div>
+    </button>
+  </div>
+
+  <!-- SEND -->
+  <div class="screen" id="screen-send">
+    <div class="topbar"><button class="back-btn" onclick="goHome()">‹</button><div class="topbar-title ver">VER</div></div>
+
+    <div class="body-pad" id="send-pick-view">
+      <label class="drop" for="file-input">
+        <div class="icon">＋</div>
+        <div><b style="color:var(--text)">Fotoğraf seç</b></div>
+        <div style="font-size:12px">Sadece fotoğraf — video bu modlar için çok yavaş olur</div>
+      </label>
+      <input type="file" id="file-input" accept="image/*" onchange="onFilePicked(event)">
+      <div class="hint">Ses ve ışık kanallarının hızı çok düşük olduğu için fotoğrafını 14×14 piksellik minik, gri tonlamalı bir "sinyal önizlemesine" dönüştürüyoruz. Tam çözünürlük değil — küçük ama gerçekten internetsiz/bluetooth'suz gidiyor.</div>
+    </div>
+
+    <div class="body-pad" id="send-preview-view" style="display:none">
+      <div class="card" style="align-items:center; display:flex; flex-direction:column; gap:12px">
+        <canvas id="thumb-preview" class="pixel-thumb" width="14" height="14" style="width:140px;height:140px"></canvas>
+        <div style="font-size:12px;color:var(--muted)">Karşı tarafa gidecek "sinyal önizlemesi" bu</div>
+      </div>
+      <button class="method-btn amber" onclick="startSend('audio')">
+        <div class="ic">🔊</div>
+        <div><div class="lbl">Sesle Gönder</div><div class="sub">~<span id="est-audio">—</span> sn · hoparlörden ton dizisi</div></div>
+      </button>
+      <button class="method-btn amber" onclick="startSend('color')">
+        <div class="ic">🌈</div>
+        <div><div class="lbl">Renkle Gönder</div><div class="sub">~<span id="est-color">—</span> sn · ekran renk yanıp-sönmesi</div></div>
+      </button>
+      <button class="btn btn-ghost" onclick="resetSendPick()">Başka fotoğraf seç</button>
+    </div>
+
+    <div class="stage" id="stage-audio-send">
+      <div class="eq" id="eq-bars"></div>
+      <div class="stage-status"><div class="main mono" id="audio-send-status">Hazır</div><div class="sub" id="audio-send-loop">Tur 1</div></div>
+      <div class="hint" style="text-align:center;max-width:280px">Telefonu karşı tarafın mikrofonuna 10-20 cm mesafede tut, sessiz bir yerde olun.</div>
+      <button class="btn btn-ghost" onclick="stopSend()">Durdur</button>
+    </div>
+
+    <div class="stage" id="stage-color-send">
+      <div id="color-flash" style="background:#fff"></div>
+      <div class="stage-status"><div class="main mono" id="color-send-status">Hazır</div><div class="sub" id="color-send-loop">Tur 1</div></div>
+      <div class="hint" style="text-align:center;max-width:280px">Ekran parlaklığını sonuna kadar aç, karşı taraf kamerayı bu kutuya doğru tutsun.</div>
+      <button class="btn btn-ghost" onclick="stopSend()">Durdur</button>
+    </div>
+  </div>
+
+  <!-- RECEIVE -->
+  <div class="screen" id="screen-receive">
+    <div class="topbar"><button class="back-btn" onclick="goHome()">‹</button><div class="topbar-title al">AL</div></div>
+
+    <div class="body-pad" id="recv-intro-view">
+      <div class="hint">Karşı taraf hangi yöntemle gönderiyorsa aynısını seç.</div>
+      <button class="method-btn teal" onclick="startReceive('audio')">
+        <div class="ic">🔊</div>
+        <div><div class="lbl">Sesle Al</div><div class="sub">Mikrofonla dinle</div></div>
+      </button>
+      <button class="method-btn teal" onclick="startReceive('color')">
+        <div class="ic">🌈</div>
+        <div><div class="lbl">Renkle Al</div><div class="sub">Kamerayla oku</div></div>
+      </button>
+      <div class="warn" id="recv-error" style="display:none"></div>
+    </div>
+
+    <div id="mic-level-wrap">
+      <div style="width:100%; max-width:320px; display:flex; flex-direction:column; gap:18px; align-items:center">
+        <div class="eq" id="recv-eq-bars"></div>
+        <div id="recv-status-text" class="mono">Senkronizasyon bekleniyor…</div>
+        <div class="progress-bar" style="width:100%"><div class="progress-fill" id="audio-progress-fill"></div></div>
+        <button class="btn btn-ghost" onclick="stopReceive()">Vazgeç</button>
+      </div>
+    </div>
+
+    <div id="cam-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="scan-guide"></div>
+      <div class="recv-overlay">
+        <div id="color-recv-status" class="mono">Senkronizasyon bekleniyor…</div>
+        <div class="progress-bar"><div class="progress-fill" id="color-progress-fill"></div></div>
+        <button class="btn btn-ghost" onclick="stopReceive()">Vazgeç</button>
+      </div>
+    </div>
+
+    <div id="recv-result">
+      <canvas id="recv-thumb" class="pixel-thumb"></canvas>
+      <div class="btn-row">
+        <button class="btn btn-teal" onclick="saveThumb()">Galeriye Kaydet</button>
+        <button class="btn btn-ghost" onclick="resetReceive()">Yeni Transfer</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============ NAV ============ */
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function goHome(){ stopSend(); stopReceive(); showScreen('screen-home'); }
+function goSendIntro(){ resetSendPick(); showScreen('screen-send'); }
+function goReceiveIntro(){ resetReceive(); showScreen('screen-receive'); }
+
+/* ============ SHARED: bit helpers ============ */
+function textToBits(str){
+  const bytes = new TextEncoder().encode(str);
+  const bits = [];
+  bytes.forEach(b=>{ for(let i=7;i>=0;i--) bits.push((b>>i)&1); });
+  return bits;
+}
+function intToBits(num, width){
+  const bits=[]; for(let i=width-1;i>=0;i--) bits.push((num>>i)&1); return bits;
+}
+function bitsToInt(bits){
+  let v=0; bits.forEach(b=>{ v=(v<<1)|b; }); return v>>>0;
+}
+function buildSymbolSequence(text){
+  const bits = textToBits(text);
+  const bitLen = bits.length;
+  let all = intToBits(bitLen, 20).concat(bits);
+  while(all.length % 3 !== 0) all.push(0);
+  const symbols = [];
+  for(let i=0;i<all.length;i+=3) symbols.push((all[i]<<2)|(all[i+1]<<1)|all[i+2]);
+  return symbols;
+}
+function bytesToBase64(bytes){ let s=''; for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s); }
+function base64ToBytes(b64){ const s=atob(b64); const arr=new Uint8Array(s.length); for(let i=0;i<s.length;i++) arr[i]=s.charCodeAt(i); return arr; }
+
+const THUMB_SIZE = 14;
+
+/* ============ SEND: pick + thumbnail ============ */
+let pickedBytes=null, pickedMessage=null;
+
+function resetSendPick(){
+  document.getElementById('send-pick-view').style.display='flex';
+  document.getElementById('send-preview-view').style.display='none';
+  document.getElementById('file-input').value='';
+  pickedBytes=null; pickedMessage=null;
+}
+
+function onFilePicked(e){
+  const f = e.target.files[0];
+  if(!f) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    img.onload = ()=>{
+      const size = THUMB_SIZE;
+      const c = document.createElement('canvas'); c.width=size; c.height=size;
+      const ctx = c.getContext('2d');
+      const s = Math.min(img.width, img.height);
+      const sx = (img.width-s)/2, sy=(img.height-s)/2;
+      ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+      const id = ctx.getImageData(0,0,size,size).data;
+      const bytes = new Uint8Array(size*size);
+      for(let p=0;p<size*size;p++){
+        const o=p*4;
+        bytes[p] = Math.round(0.299*id[o]+0.587*id[o+1]+0.114*id[o+2]);
+      }
+      pickedBytes = bytes;
+      pickedMessage = `FN2|G|${size}|${bytesToBase64(bytes)}`;
+      renderThumb(document.getElementById('thumb-preview'), size, bytes);
+      showPreview();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+function renderThumb(canvas, size, bytes){
+  canvas.width=size; canvas.height=size;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(size,size);
+  for(let p=0;p<size*size;p++){
+    const v=bytes[p]; const o=p*4;
+    imgData.data[o]=v; imgData.data[o+1]=v; imgData.data[o+2]=v; imgData.data[o+3]=255;
+  }
+  ctx.putImageData(imgData,0,0);
+}
+
+function showPreview(){
+  document.getElementById('send-pick-view').style.display='none';
+  document.getElementById('send-preview-view').style.display='flex';
+  const symCount = buildSymbolSequence(pickedMessage).length;
+  document.getElementById('est-audio').textContent = Math.ceil(symCount*AUDIO_SYMBOL_MS/1000);
+  document.getElementById('est-color').textContent = Math.ceil(symCount*COLOR_SYMBOL_MS/1000);
+}
+
+/* ============ SEND: audio ============ */
+const AUDIO_FREQS = [1200,1400,1600,1800,2000,2200,2400,2600];
+const AUDIO_SYMBOL_MS = 110;
+const AUDIO_MARKER_MS = 320;
+
+let sendAudioCtx=null, sendOsc=null, sendGain=null, sendTimer=null, sendLoopCount=1;
+
+function buildEqBars(containerId, count){
+  const c = document.getElementById(containerId);
+  c.innerHTML='';
+  for(let i=0;i<count;i++){ const d=document.createElement('div'); d.className='eq-bar'; d.id=containerId+'-'+i; c.appendChild(d); }
+}
+
+function startSend(method){
+  document.getElementById('send-preview-view').style.display='none';
+  if(method==='audio') startAudioSend(); else startColorSend();
+}
+
+function startAudioSend(){
+  document.getElementById('stage-audio-send').classList.add('active');
+  buildEqBars('eq-bars', 8);
+  const symbols = buildSymbolSequence(pickedMessage);
+  sendAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  sendOsc = sendAudioCtx.createOscillator();
+  sendGain = sendAudioCtx.createGain();
+  sendGain.gain.value = 0.25;
+  sendOsc.connect(sendGain).connect(sendAudioCtx.destination);
+  sendOsc.type='sine';
+  sendOsc.start();
+  sendLoopCount=1;
+  let idx=0;
+  function tick(){
+    document.querySelectorAll('#eq-bars .eq-bar').forEach(b=>{b.classList.remove('on'); b.style.height='8px';});
+    if(idx < symbols.length){
+      const sym = symbols[idx];
+      sendOsc.frequency.setValueAtTime(AUDIO_FREQS[sym], sendAudioCtx.currentTime);
+      const bar = document.getElementById('eq-bars-'+sym);
+      if(bar){ bar.classList.add('on'); bar.style.height='70px'; }
+      document.getElementById('audio-send-status').textContent = `İşaret ${idx+1} / ${symbols.length}`;
+      idx++;
+      sendTimer = setTimeout(tick, AUDIO_SYMBOL_MS);
+    } else {
+      sendGain.gain.setValueAtTime(0, sendAudioCtx.currentTime);
+      document.getElementById('audio-send-status').textContent = `Kare tamamlandı — sessizlik ile işaretleniyor`;
+      sendTimer = setTimeout(()=>{
+        idx=0; sendLoopCount++; document.getElementById('audio-send-loop').textContent=`Tur ${sendLoopCount}`;
+        sendGain.gain.setValueAtTime(0.25, sendAudioCtx.currentTime);
+        tick();
+      }, AUDIO_MARKER_MS);
+    }
+  }
+  tick();
+}
+
+function stopSend(){
+  clearTimeout(sendTimer); sendTimer=null;
+  if(sendOsc){ try{sendOsc.stop();}catch(e){} sendOsc=null; }
+  if(sendAudioCtx){ sendAudioCtx.close(); sendAudioCtx=null; }
+  if(colorSendTimer){ clearTimeout(colorSendTimer); colorSendTimer=null; }
+  document.getElementById('stage-audio-send').classList.remove('active');
+  document.getElementById('stage-color-send').classList.remove('active');
+}
+
+/* ============ SEND: color ============ */
+const COLOR_HUES = [0,45,90,135,180,225,270,315];
+const COLOR_SYMBOL_MS = 150;
+const COLOR_MARKER_MS = 320;
+let colorSendTimer=null, colorLoopCount=1;
+
+function startColorSend(){
+  document.getElementById('stage-color-send').classList.add('active');
+  const symbols = buildSymbolSequence(pickedMessage);
+  const flash = document.getElementById('color-flash');
+  colorLoopCount=1;
+  let idx=0;
+  function tick(){
+    if(idx < symbols.length){
+      flash.style.background = `hsl(${COLOR_HUES[symbols[idx]]},100%,50%)`;
+      document.getElementById('color-send-status').textContent = `İşaret ${idx+1} / ${symbols.length}`;
+      idx++;
+      colorSendTimer = setTimeout(tick, COLOR_SYMBOL_MS);
+    } else {
+      flash.style.background = '#000000';
+      document.getElementById('color-send-status').textContent = 'Kare tamamlandı — siyah ile işaretleniyor';
+      colorSendTimer = setTimeout(()=>{ idx=0; colorLoopCount++; document.getElementById('color-send-loop').textContent=`Tur ${colorLoopCount}`; tick(); }, COLOR_MARKER_MS);
+    }
+  }
+  tick();
+}
+
+/* ============ RECEIVE: shared decoder state machine ============ */
+function makeDecoder(symbolDuration, onMessage, onProgress){
+  let state='SYNC';
+  let lastClass=null;
+  let nextSampleAt=0;
+  let headerSymbols=[], dataSymbols=[], needed=0, bitLen=0;
+  return function feed(cls, now){
+    if(state==='SYNC'){
+      if(lastClass==='marker' && cls.type==='symbol'){
+        state='HEADER'; headerSymbols=[cls.value]; dataSymbols=[];
+        nextSampleAt = now + symbolDuration*1.5;
+        onProgress('Başlık okunuyor…', 0, 1);
+      }
+    } else if(state==='HEADER'){
+      if(now>=nextSampleAt){
+        headerSymbols.push(cls.type==='symbol'? cls.value : 0);
+        nextSampleAt += symbolDuration;
+        if(headerSymbols.length>=7){
+          let bits=[]; headerSymbols.forEach(s=>bits.push((s>>2)&1,(s>>1)&1,s&1));
+          bitLen = bitsToInt(bits.slice(0,20));
+          needed = Math.ceil(bitLen/3);
+          if(needed<=0 || needed>5000){ state='SYNC'; return; } // sanity guard
+          state='DATA'; dataSymbols=[];
+        }
+      }
+    } else if(state==='DATA'){
+      if(now>=nextSampleAt){
+        dataSymbols.push(cls.type==='symbol'? cls.value : 0);
+        nextSampleAt += symbolDuration;
+        onProgress(`${dataSymbols.length} / ${needed} sembol alındı`, dataSymbols.length, needed);
+        if(dataSymbols.length>=needed){
+          let bits=[]; dataSymbols.forEach(s=>bits.push((s>>2)&1,(s>>1)&1,s&1));
+          bits = bits.slice(0, bitLen);
+          const bytes=[];
+          for(let i=0;i<bits.length;i+=8){
+            let byte=0; for(let j=0;j<8;j++) byte=(byte<<1)|(bits[i+j]||0);
+            bytes.push(byte);
+          }
+          try{
+            const text = new TextDecoder().decode(new Uint8Array(bytes));
+            onMessage(text);
+          }catch(e){ /* corrupted pass, wait for next loop */ }
+          state='SYNC';
+        }
+      }
+    }
+    if(cls.type==='marker') lastClass='marker';
+    else if(cls.type==='symbol') lastClass='symbol';
+  };
+}
+
+function handleDecodedMessage(text){
+  const parts = text.split('|');
+  if(parts[0]!=='FN2' || parts[1]!=='G') return;
+  const size = parseInt(parts[2],10);
+  const bytes = base64ToBytes(parts[3]);
+  if(!size || bytes.length < size*size) return;
+  finishReceive(size, bytes);
+}
+
+/* ============ RECEIVE: nav ============ */
+let recvMode=null;
+function resetReceive(){
+  document.getElementById('recv-intro-view').style.display='flex';
+  document.getElementById('mic-level-wrap').classList.remove('active');
+  document.getElementById('cam-wrap').classList.remove('active');
+  document.getElementById('recv-result').classList.remove('active');
+  document.getElementById('recv-error').style.display='none';
+  stopReceive();
+}
+function stopReceive(){
+  if(recvAudioCtx){ recvAudioCtx.close(); recvAudioCtx=null; }
+  if(recvStream){ recvStream.getTracks().forEach(t=>t.stop()); recvStream=null; }
+  if(recvRAF){ cancelAnimationFrame(recvRAF); recvRAF=null; }
+}
+
+function startReceive(method){
+  document.getElementById('recv-error').style.display='none';
+  recvMode = method;
+  if(method==='audio') startAudioReceive(); else startColorReceive();
+}
+
+/* ============ RECEIVE: audio ============ */
+let recvAudioCtx=null, recvStream=null, recvRAF=null, recvAnalyser=null, audioDecoder=null;
+
+async function startAudioReceive(){
+  try{
+    recvStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false } });
+  }catch(err){
+    document.getElementById('recv-error').style.display='block';
+    document.getElementById('recv-error').textContent = 'Mikrofona erişilemedi. Bu sayfayı https bir adresten açtığından ve mikrofon izni verdiğinden emin ol.';
+    return;
+  }
+  document.getElementById('recv-intro-view').style.display='none';
+  document.getElementById('mic-level-wrap').classList.add('active');
+  buildEqBars('recv-eq-bars', 8);
+  recvAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const src = recvAudioCtx.createMediaStreamSource(recvStream);
+  recvAnalyser = recvAudioCtx.createAnalyser();
+  recvAnalyser.fftSize = 4096;
+  src.connect(recvAnalyser);
+  const freqData = new Uint8Array(recvAnalyser.frequencyBinCount);
+  const sampleRate = recvAudioCtx.sampleRate;
+  const binHz = sampleRate / recvAnalyser.fftSize;
+
+  audioDecoder = makeDecoder(AUDIO_SYMBOL_MS,
+    (text)=>handleDecodedMessage(text),
+    (msg, got, total)=>{
+      document.getElementById('recv-status-text').textContent = msg;
+      document.getElementById('audio-progress-fill').style.width = total? (100*got/total)+'%' : '0%';
+    }
+  );
+
+  function classifyAudio(){
+    recvAnalyser.getByteFrequencyData(freqData);
+    let bestBin=-1, bestVal=0;
+    const loBin = Math.floor(1100/binHz), hiBin = Math.ceil(3050/binHz);
+    for(let b=loBin;b<=hiBin && b<freqData.length;b++){
+      if(freqData[b]>bestVal){ bestVal=freqData[b]; bestBin=b; }
+    }
+    document.querySelectorAll('#recv-eq-bars .eq-bar').forEach((bar,i)=>{
+      const f=AUDIO_FREQS[i]; const b=Math.round(f/binHz);
+      const v = freqData[b]||0;
+      bar.style.height = Math.max(8, v/255*70)+'px';
+      bar.classList.toggle('on', v>110);
+    });
+    if(bestVal < 55) return {type:'marker'};   // near-silence = frame gap
+    if(bestVal < 100) return {type:'noise'};   // ambiguous, ignore
+    const freq = bestBin*binHz;
+    let nearestIdx=-1, nearestDist=1e9;
+    AUDIO_FREQS.forEach((f,i)=>{ const d=Math.abs(freq-f); if(d<nearestDist){nearestDist=d;nearestIdx=i;} });
+    if(nearestDist < 90) return {type:'symbol', value:nearestIdx};
+    return {type:'noise'};
+  }
+
+  function loop(){
+    recvRAF = requestAnimationFrame(loop);
+    const cls = classifyAudio();
+    audioDecoder(cls, performance.now());
+  }
+  loop();
+}
+
+/* ============ RECEIVE: color ============ */
+let colorDecoder=null, colorCropCanvas=null, colorCropCtx=null;
+
+async function startColorReceive(){
+  try{
+    recvStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
+  }catch(err){
+    document.getElementById('recv-error').style.display='block';
+    document.getElementById('recv-error').textContent = 'Kameraya erişilemedi. Bu sayfayı https bir adresten açtığından ve kamera izni verdiğinden emin ol.';
+    return;
+  }
+  document.getElementById('recv-intro-view').style.display='none';
+  document.getElementById('cam-wrap').classList.add('active');
+  const video = document.getElementById('video');
+  video.srcObject = recvStream;
+  await video.play();
+
+  colorCropCanvas = document.createElement('canvas'); colorCropCanvas.width=40; colorCropCanvas.height=40;
+  colorCropCtx = colorCropCanvas.getContext('2d', {willReadFrequently:true});
+
+  colorDecoder = makeDecoder(COLOR_SYMBOL_MS,
+    (text)=>handleDecodedMessage(text),
+    (msg, got, total)=>{
+      document.getElementById('color-recv-status').textContent = msg;
+      document.getElementById('color-progress-fill').style.width = total? (100*got/total)+'%' : '0%';
+    }
+  );
+
+  function rgbToHsv(r,g,b){
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+    let h=0;
+    if(d!==0){
+      if(max===r) h=60*(((g-b)/d)%6);
+      else if(max===g) h=60*((b-r)/d+2);
+      else h=60*((r-g)/d+4);
+    }
+    if(h<0) h+=360;
+    const s = max===0?0:d/max;
+    return {h, s, v:max};
+  }
+
+  function classifyColor(){
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if(!vw||!vh) return {type:'noise'};
+    const cs = Math.min(vw,vh)*0.3;
+    colorCropCtx.drawImage(video, (vw-cs)/2, (vh-cs)/2, cs, cs, 0,0,40,40);
+    const d = colorCropCtx.getImageData(0,0,40,40).data;
+    let r=0,g=0,b=0, n=40*40;
+    for(let i=0;i<d.length;i+=4){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; }
+    r/=n; g/=n; b/=n;
+    const {h,s,v} = rgbToHsv(r,g,b);
+    if(v<0.18) return {type:'marker'};
+    if(v<0.32 || s<0.28) return {type:'noise'};
+    let nearestIdx=-1, nearestDist=1e9;
+    COLOR_HUES.forEach((hue,i)=>{
+      let dd = Math.abs(h-hue); dd=Math.min(dd,360-dd);
+      if(dd<nearestDist){nearestDist=dd; nearestIdx=i;}
+    });
+    if(nearestDist<28) return {type:'symbol', value:nearestIdx};
+    return {type:'noise'};
+  }
+
+  let lastT=0;
+  function loop(ts){
+    recvRAF = requestAnimationFrame(loop);
+    if(ts-lastT<35) return;
+    lastT=ts;
+    const cls = classifyColor();
+    colorDecoder(cls, performance.now());
+  }
+  recvRAF = requestAnimationFrame(loop);
+}
+
+/* ============ RECEIVE: finish ============ */
+function finishReceive(size, bytes){
+  stopReceive();
+  document.getElementById('mic-level-wrap').classList.remove('active');
+  document.getElementById('cam-wrap').classList.remove('active');
+  const canvas = document.getElementById('recv-thumb');
+  renderThumb(canvas, size, bytes);
+  canvas.style.width='260px'; canvas.style.height='260px';
+  window._fenerRecvSize=size; window._fenerRecvBytes=bytes;
+  document.getElementById('recv-result').classList.add('active');
+}
+
+function saveThumb(){
+  const size = window._fenerRecvSize, bytes = window._fenerRecvBytes;
+  const big = document.createElement('canvas'); big.width=560; big.height=560;
+  const ctx = big.getContext('2d'); ctx.imageSmoothingEnabled=false;
+  const small = document.getElementById('recv-thumb');
+  ctx.drawImage(small, 0, 0, 560, 560);
+  const a = document.createElement('a');
+  a.href = big.toDataURL('image/png');
+  a.download = 'fener-sinyal-' + Date.now() + '.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
